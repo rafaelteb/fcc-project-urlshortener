@@ -30,13 +30,29 @@ const urlSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  shorturl: Number
+  shorturl: {
+    type: Number,
+    unique: true,
+    required: true
+  }
 });
-let UrlSchema = mongoose.model('UrlSchema', UrlSchema);
+let Urltable = mongoose.model('Urltable', urlSchema);
 
 // Your first API endpoint
-app.post('/api/shorturl:url', function(req, res) {
-  res.json({ original_url: req.body.url, short_url: 1 });
+app.post('/api/:shorturl', function(req, res) {
+  // save the url as a document to mongodb
+  let urlInstance = new Urltable({
+    fullurl: req.params.shorturl
+  });
+  urlInstance.save((err, data) => {
+     if(err){
+       console.log(err);
+     }
+     done(null, data);
+   });
+  
+  // send response
+  res.json({ original_url: req.body.url, short_url: urlInstance.shorturl });
 });
 
 app.listen(port, function() {
