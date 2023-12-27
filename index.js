@@ -1,5 +1,5 @@
 // Js Compilation and Clean-Code-Assumptions: 
-// - function declarations are "hoisted", meaning that the asyn function main() declaration will automatically be put to the top
+// - function declarations are "hoisted", meaning that the asyn function dbmain() declaration will automatically be put to the top
 // - so: first outside code and finally functions in alphabetical order to make it more readable!
 
 // Importing necessary libraries
@@ -23,7 +23,7 @@ app.listen(port, function() {
 });
 
 // Wait for Mongo database to connect, logging an error if there is a problem
-main().catch((err) => {
+dbmain().catch((err) => {
   console.error('Database connection error:', err);
   process.exit(1);
 });
@@ -82,23 +82,6 @@ app.get('/api/shorturl/:id', (req, res) => {
 });
 
 // Functions in Alphabetical order
-async function main() {
-  try {
-    await mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
-    console.log('Connected to the database');
-  } catch (err) { 
-    throw new Error('Failed to connect to the database: ' + err.message);
-  }
-}
-
-async function findLastElementAndReturnNextId() {
-  const lastElement = await Urltable.findOne().sort('-_id');
-  if (lastElement === null || lastElement === undefined || !lastElement) {
-    return 1;
-  }
-  return lastElement.shorturl + 1;
-}
-
 const createAndSaveUrlInstance = (last, fullurl, done) => {
   let urlInstance = new Urltable({
     fullurl: fullurl,
@@ -115,6 +98,14 @@ const createAndSaveUrlInstance = (last, fullurl, done) => {
   });
 };
 
+async function findLastElementAndReturnNextId() {
+  const lastElement = await Urltable.findOne().sort('-_id');
+  if (lastElement === null || lastElement === undefined || !lastElement) {
+    return 1;
+  }
+  return lastElement.shorturl + 1;
+}
+
 const findUrlById = (shorturl_number, done) => {
   Urltable.findOne({ shorturl: shorturl_number }, (err, data) => {
     if(err){
@@ -125,3 +116,12 @@ const findUrlById = (shorturl_number, done) => {
     done(null, data);
   });
   };
+
+  async function dbmain() {
+    try {
+      await mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+      console.log('Connected to the database');
+    } catch (err) { 
+      throw new Error('Failed to connect to the database: ' + err.message);
+    }
+  }
