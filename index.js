@@ -8,12 +8,13 @@ const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const dns = require('dns');
 const mongoose = require('mongoose');
 
 // Basic Configurations
 // Assign port if not set in env
 const port = process.env.PORT || 3000;
-// handle url encoded data
+// Middleware handle url encoded data
 app.use(bodyParser.urlencoded({extended: false}))
 // Corse settings activate
 app.use(cors());
@@ -50,11 +51,19 @@ app.get('/', function(req, res) {
 
 // Return saved url and shorturl_id
 app.post('/api/shorturl', async function(req, res) {
-
-  let last = await findLastElementAndReturnNextId();
-  let fullurl = req.body.url;
+  // check validity of url otherwise return error response and quit
+  let fullurl = new URL(req.body.url);
+  let errormessage = { error: 'invalid url' };
+  dns.lookup(fullurl.hostname, async (err, address) => {
+    if (err) {
+      console.error(errormessage);
+      res.json(errormessage);
+    }
+    console.log("Url could be resolved to following IPs: " + address)
+  });
 
   // save the url as a document to mongodb
+  let last = await findLastElementAndReturnNextId();
   createAndSaveUrlInstance(last, fullurl, (err, data) => {
     if (err) {
       console.error(err);
