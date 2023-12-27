@@ -47,22 +47,16 @@ app.get('/', function(req, res) {
 // Return saved url and shorturl_id
 app.post('/api/shorturl', async function(req, res) {
   let last = await findLastElementAndReturnNextId();
+  let fullurl = req.body.url;
   // save the url as a document to mongodb
-  const createAndSaveUrlInstance = (last, done) => {
-    let urlInstance = new Urltable({
-      fullurl: req.params.shorturl,
-      shorturl: last
-    });
-    urlInstance.save((err, data) => {
-       if(err){
-         console.log(err);
-       }
-       // send response
-       done(null, data);
-       
-     });
-  }
-  res.json({ original_url: req.body.url, short_url: last });
+  createAndSaveUrlInstance(last, fullurl, (err, data) => {
+    if (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error saving URL' });
+    } else {
+      res.json({ original_url: fullurl, short_url: last });
+    }
+  });
 });
 
 app.listen(port, function() {
@@ -75,8 +69,7 @@ app.get('/api/shorturl/:id', (req, res) => {
   let id = req.params.id;
   const findUrlById = (id, done) => {
    Urltable.findById(id, (err, data) => {
-     if(err){  
-       console.log('taaaa');
+     if(err){
        console.log(err);
      }
      // redirect to the found url
@@ -99,10 +92,24 @@ async function main() {
 
 async function findLastElementAndReturnNextId() {
   const lastElement = await Urltable.findOne().sort('-_id');
-    return lastElement.shorturl + 1;
-  if (!lastElement) {
+  if (lastElement === null || lastElement === undefined || !lastElement) {
     return 1;
   }
-
-  return lastElement;
+  return lastElement.shorturl + 1;
 }
+
+const createAndSaveUrlInstance = (last, fullurl, done) => {
+  let urlInstance = new Urltable({
+    fullurl: fullurl,
+    shorturl: last
+  });
+  urlInstance.save((err, data) => {
+    if (err) {
+      console.log(err);
+      done(err);
+    } else {
+      done(null, data);
+      console.log("successfully wrote to db");
+    }
+  });
+};
