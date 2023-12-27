@@ -17,6 +17,10 @@ const port = process.env.PORT || 3000;
 app.use(bodyParser.urlencoded({extended: false}))
 // Corse settings activate
 app.use(cors());
+// Set app port listner
+app.listen(port, function() {
+  console.log(`Listening on port ${port}`);
+});
 
 // Wait for Mongo database to connect, logging an error if there is a problem
 main().catch((err) => {
@@ -46,8 +50,10 @@ app.get('/', function(req, res) {
 
 // Return saved url and shorturl_id
 app.post('/api/shorturl', async function(req, res) {
+
   let last = await findLastElementAndReturnNextId();
   let fullurl = req.body.url;
+
   // save the url as a document to mongodb
   createAndSaveUrlInstance(last, fullurl, (err, data) => {
     if (err) {
@@ -59,25 +65,20 @@ app.post('/api/shorturl', async function(req, res) {
   });
 });
 
-app.listen(port, function() {
-  console.log(`Listening on port ${port}`);
-});
-
 // Return shorturl per id and redirect
 app.get('/api/shorturl/:id', (req, res) => {
-  // find url belonging to id in database
-  let id = req.params.id;
-  const findUrlById = (id, done) => {
-   Urltable.findById(id, (err, data) => {
-     if(err){
-       console.log(err);
-     }
-     // redirect to the found url
-     console.log('Redirecting to: ' + data);
-     res.redirect(data);
-     done(null, data);
-   });
-   };
+
+  let shorturl_number = req.params.id;
+  
+  // find url belonging to id in database and then redirect to fullurl of document
+  findUrlById(shorturl_number, (err, data) => {
+    if (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error finding id and redirecting URL' });
+    } else {
+      res.redirect(data.fullurl);
+    }
+  });
 });
 
 // Functions in Alphabetical order
@@ -113,3 +114,14 @@ const createAndSaveUrlInstance = (last, fullurl, done) => {
     }
   });
 };
+
+const findUrlById = (shorturl_number, done) => {
+  Urltable.findOne({ shorturl: shorturl_number }, (err, data) => {
+    if(err){
+      console.log(err);
+    }
+    // redirect to the found url
+    console.log('Found url: ' + data.fullurl);
+    done(null, data);
+  });
+  };
